@@ -1,0 +1,52 @@
+https://snyk.io/blog/10-best-practices-to-containerize-nodejs-web-applications-with-docker/ 
+ 
+Follow these 10 steps to build optimized Node.js web applications with Docker:
+
+Use explicit and deterministic Docker base image tags
+
+Install only production dependencies in the Node.js Docker image
+
+Optimize Node.js tooling for production
+
+Don’t run containers as root
+
+Safely terminate Node.js Docker web applications
+
+Graceful shutdown for your Node.js web applications
+
+Find and fix security vulnerabilities in your Node.js docker image
+
+Use multi-stage builds
+
+Keeping unnecessary files out of your Node.js Docker images
+
+Mounting secrets into the Docker build image
+
+
+# --------------> The build image__
+FROM node:latest AS build
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init
+WORKDIR /usr/src/app
+COPY package*.json /usr/src/app/
+RUN --mount=type=secret,mode=0644,id=npmrc,target=/usr/src/app/.npmrc npm ci --only=production
+
+# --------------> The production image__
+FROM node:16.17.0-bullseye-slim
+
+ENV NODE_ENV production
+COPY --from=build /usr/bin/dumb-init /usr/bin/dumb-init
+USER node
+WORKDIR /usr/src/app
+COPY --chown=node:node --from=build /usr/src/app/node_modules /usr/src/app/node_modules
+COPY --chown=node:node . /usr/src/app
+CMD ["dumb-init", "node", "server.js"]
+
+
+
+.dockerignore
+node_modules
+npm-debug.log
+Dockerfile
+.git
+.gitignore
+.npmrc
